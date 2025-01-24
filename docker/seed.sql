@@ -29,7 +29,8 @@ CREATE TABLE "tickets" (
   "senderId" INT,
   "stateId" VARCHAR REFERENCES "states"(id),
   "body" VARCHAR NOT NULL,
-  "timestamp" TIMESTAMP not null default now()
+  "timestamp" TIMESTAMP not null default now(),
+  "sortOrder" INT NOT NULL
 );
 
 -- TODO: Add seed data
@@ -44,8 +45,9 @@ INSERT INTO "members" (id, "boardId", "userId") VALUES ('2', 1, 2);
 INSERT INTO "members" (id, "boardId", "userId") VALUES ('3', 1, 3);
 INSERT INTO "members" (id, "boardId", "userId") VALUES ('4', 1, 4);
 
-INSERT INTO "tickets" (id, "boardId", "senderId", "stateId", body, timestamp) VALUES ('1', 1, 1, 1, 'First ticket', '2025-01-01 00:00:00');
-INSERT INTO "tickets" (id, "boardId", "senderId", "stateId", body, timestamp) VALUES ('2', 1, 2, 2, 'Second ticket', '2025-01-02 00:00:00');
-INSERT INTO "tickets" (id, "boardId", "senderId", "stateId", body, timestamp) VALUES ('3', 1, 3, 3, 'Third ticket', '2025-01-03 00:00:00');
-INSERT INTO "tickets" (id, "boardId", "senderId", "stateId", body, timestamp) VALUES ('4', 1, 4, 1, 'Fourth ticket', '2025-01-04 00:00:00');
+INSERT INTO "tickets" (id, "boardId", "senderId", "stateId", body, timestamp, "sortOrder") VALUES ('1', 1, 1, 1, 'First ticket', '2025-01-01 00:00:00', 1, 1);
+INSERT INTO "tickets" (id, "boardId", "senderId", "stateId", body, timestamp, "sortOrder") VALUES ('2', 1, 2, 2, 'Second ticket', '2025-01-02 00:00:00', 2, 2);
+INSERT INTO "tickets" (id, "boardId", "senderId", "stateId", body, timestamp, "sortOrder") VALUES ('3', 1, 3, 3, 'Third ticket', '2025-01-03 00:00:00', 3, 3);
+INSERT INTO "tickets" (id, "boardId", "senderId", "stateId", body, timestamp, "sortOrder") VALUES ('4', 1, 4, 1, 'Fourth ticket', '2025-01-04 00:00:00', 4, 4);
+
 

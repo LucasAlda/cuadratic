@@ -62,6 +62,7 @@ const ticketSchema = createTableSchema({
     stateId: "string",
     body: "string",
     timestamp: "number",
+    sortOrder: "number",
   },
   primaryKey: "id",
   relationships: {

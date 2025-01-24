@@ -2,6 +2,7 @@ import { cn } from "@/lib/utils";
 import {
   closestCenter,
   DndContext,
+  DragOverlay,
   KeyboardSensor,
   MouseSensor,
   TouchSensor,
@@ -16,7 +17,8 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { ReactNode, useMemo } from "react";
+import { MaybePromise } from "@rocicorp/zero";
+import { ReactNode, useMemo, useState } from "react";
 
 export function Board<
   Item extends { readonly id: string },
@@ -33,11 +35,12 @@ export function Board<
   columnKey: (item: Item) => string;
   columns: readonly Column[];
   items: readonly Item[];
-  renderItem: (item: Item) => ReactNode;
+  renderItem: (item: Item, isOverlay?: boolean) => ReactNode;
   renderColumn: (props: { column: Column; children: ReactNode }) => ReactNode;
   onColumnChange: (itemId: string, columnId: string) => void;
-  onSortChange: (itemId: string, overId: string) => void;
+  onSortChange: (itemId: string, overId: string) => MaybePromise<void>;
 }) {
+  const [activeId, setActiveId] = useState<string | null>(null);
   const cols = useMemo(() => {
     return items.reduce(
       (acc, item) => {
@@ -73,40 +76,27 @@ export function Board<
       sensors={sensors}
       collisionDetection={closestCenter}
       onDragOver={(event) => {
-        const overContainer = event.over?.data?.current?.sortable?.containerId;
+        let overContainer = event.over?.data?.current?.sortable?.containerId;
         const activeContainer = event.active?.data?.current?.sortable?.containerId;
         if (overContainer !== activeContainer) {
-          console.log(event.active.id, overContainer);
           onColumnChange(event.active.id as string, overContainer);
-          // setItems((items) => {
-          //   return items.map((i) => {
-          //     if (i.id === event.active.id) {
-          //       return { ...i, status: overContainer };
-          //     }
-
-          //     return i;
-          //   });
-          // });
         }
       }}
-      onDragEnd={(event) => {
+      onDragStart={(event) => {
+        setActiveId(event.active.id as string);
+      }}
+      onDragEnd={async (event) => {
         const { active, over } = event;
-
         if (active.id !== over?.id) {
-          onSortChange(active.id as string, over?.id as string);
-          // setItems((items) => {
-          //   const oldIndex = items.findIndex((item) => item.id === active.id);
-          //   const newIndex = items.findIndex((item) => item.id === over?.id);
-          //   return arrayMove(items, oldIndex, newIndex);
-          // });
+          await onSortChange(active.id as string, over?.id as string);
         }
+        setActiveId(null);
       }}
     >
-      <div className="flex">
-        {columns.map((column) => (
-          <Column column={column} items={cols[column.id]} renderItem={renderItem} renderColumn={renderColumn} />
-        ))}
-      </div>
+      {columns.map((column) => (
+        <Column column={column} items={cols[column.id]} renderItem={renderItem} renderColumn={renderColumn} />
+      ))}
+      <DragOverlay>{activeId && renderItem(items.find((item) => item.id === activeId)!, true)}</DragOverlay>
     </DndContext>
   );
 }
@@ -119,25 +109,39 @@ function Column<Item extends { readonly id: string }, Column extends { readonly 
 }: {
   column: Column;
   items: Item[];
-  renderItem: (item: Item) => ReactNode;
+  renderItem: (item: Item, isOverlay?: boolean) => ReactNode;
   renderColumn: (props: { readonly column: Column; children: ReactNode }) => ReactNode;
 }) {
   return (
     <SortableContext items={items} strategy={verticalListSortingStrategy} id={column.id}>
       {renderColumn({
         column,
-        children: items.map((item) => (
-          <SortableItem key={item.id} id={item.id}>
-            {renderItem(item)}
-          </SortableItem>
-        )),
+        children: (
+          <>
+            {items.map((item) => (
+              <SortableItem key={item.id} id={item.id}>
+                {renderItem(item, false)}
+              </SortableItem>
+            ))}
+            {items.length === 0 && (
+              <SortableItem id={"__SPOT__" + column.id}>
+                <div />
+              </SortableItem>
+            )}
+          </>
+        ),
       })}
     </SortableContext>
   );
 }
 
 function SortableItem({ id, children }: { id: string; children: ReactNode }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: id,
+    data: {
+      type: "SPOT",
+    },
+  });
 
   const style = {
     transform: transform ? CSS.Transform.toString(transform) : undefined,
@@ -150,9 +154,9 @@ function SortableItem({ id, children }: { id: string; children: ReactNode }) {
       style={style}
       {...attributes}
       {...listeners}
-      className={cn(isDragging && "cursor-grabbing shadow-md z-50")}
+      className={cn(isDragging ? "cursor-grabbing -bg-slate-300/50 rounded-md z-20" : "z-10")}
     >
-      {children}
+      <div className={cn(isDragging && "opacity-0")}>{children}</div>
     </div>
   );
 }

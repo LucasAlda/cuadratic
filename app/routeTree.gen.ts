@@ -11,105 +11,106 @@
 // Import Routes
 
 import { Route as rootRoute } from './routes/__root'
-import { Route as KanbanImport } from './routes/_kanban'
-import { Route as KanbanIndexImport } from './routes/_kanban/index'
-import { Route as KanbanColumnsImport } from './routes/_kanban/columns'
+import { Route as BoardImport } from './routes/board'
+import { Route as BoardColumnsImport } from './routes/board/columns'
+import { Route as BoardBoardIdImport } from './routes/board/$boardId'
 
 // Create/Update Routes
 
-const KanbanRoute = KanbanImport.update({
-  id: '/_kanban',
+const BoardRoute = BoardImport.update({
+  id: '/board',
+  path: '/board',
   getParentRoute: () => rootRoute,
 } as any)
 
-const KanbanIndexRoute = KanbanIndexImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => KanbanRoute,
-} as any)
-
-const KanbanColumnsRoute = KanbanColumnsImport.update({
+const BoardColumnsRoute = BoardColumnsImport.update({
   id: '/columns',
   path: '/columns',
-  getParentRoute: () => KanbanRoute,
+  getParentRoute: () => BoardRoute,
+} as any)
+
+const BoardBoardIdRoute = BoardBoardIdImport.update({
+  id: '/$boardId',
+  path: '/$boardId',
+  getParentRoute: () => BoardRoute,
 } as any)
 
 // Populate the FileRoutesByPath interface
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/_kanban': {
-      id: '/_kanban'
-      path: ''
-      fullPath: ''
-      preLoaderRoute: typeof KanbanImport
+    '/board': {
+      id: '/board'
+      path: '/board'
+      fullPath: '/board'
+      preLoaderRoute: typeof BoardImport
       parentRoute: typeof rootRoute
     }
-    '/_kanban/columns': {
-      id: '/_kanban/columns'
-      path: '/columns'
-      fullPath: '/columns'
-      preLoaderRoute: typeof KanbanColumnsImport
-      parentRoute: typeof KanbanImport
+    '/board/$boardId': {
+      id: '/board/$boardId'
+      path: '/$boardId'
+      fullPath: '/board/$boardId'
+      preLoaderRoute: typeof BoardBoardIdImport
+      parentRoute: typeof BoardImport
     }
-    '/_kanban/': {
-      id: '/_kanban/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof KanbanIndexImport
-      parentRoute: typeof KanbanImport
+    '/board/columns': {
+      id: '/board/columns'
+      path: '/columns'
+      fullPath: '/board/columns'
+      preLoaderRoute: typeof BoardColumnsImport
+      parentRoute: typeof BoardImport
     }
   }
 }
 
 // Create and export the route tree
 
-interface KanbanRouteChildren {
-  KanbanColumnsRoute: typeof KanbanColumnsRoute
-  KanbanIndexRoute: typeof KanbanIndexRoute
+interface BoardRouteChildren {
+  BoardBoardIdRoute: typeof BoardBoardIdRoute
+  BoardColumnsRoute: typeof BoardColumnsRoute
 }
 
-const KanbanRouteChildren: KanbanRouteChildren = {
-  KanbanColumnsRoute: KanbanColumnsRoute,
-  KanbanIndexRoute: KanbanIndexRoute,
+const BoardRouteChildren: BoardRouteChildren = {
+  BoardBoardIdRoute: BoardBoardIdRoute,
+  BoardColumnsRoute: BoardColumnsRoute,
 }
 
-const KanbanRouteWithChildren =
-  KanbanRoute._addFileChildren(KanbanRouteChildren)
+const BoardRouteWithChildren = BoardRoute._addFileChildren(BoardRouteChildren)
 
 export interface FileRoutesByFullPath {
-  '': typeof KanbanRouteWithChildren
-  '/columns': typeof KanbanColumnsRoute
-  '/': typeof KanbanIndexRoute
+  '/board': typeof BoardRouteWithChildren
+  '/board/$boardId': typeof BoardBoardIdRoute
+  '/board/columns': typeof BoardColumnsRoute
 }
 
 export interface FileRoutesByTo {
-  '/columns': typeof KanbanColumnsRoute
-  '/': typeof KanbanIndexRoute
+  '/board': typeof BoardRouteWithChildren
+  '/board/$boardId': typeof BoardBoardIdRoute
+  '/board/columns': typeof BoardColumnsRoute
 }
 
 export interface FileRoutesById {
   __root__: typeof rootRoute
-  '/_kanban': typeof KanbanRouteWithChildren
-  '/_kanban/columns': typeof KanbanColumnsRoute
-  '/_kanban/': typeof KanbanIndexRoute
+  '/board': typeof BoardRouteWithChildren
+  '/board/$boardId': typeof BoardBoardIdRoute
+  '/board/columns': typeof BoardColumnsRoute
 }
 
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '' | '/columns' | '/'
+  fullPaths: '/board' | '/board/$boardId' | '/board/columns'
   fileRoutesByTo: FileRoutesByTo
-  to: '/columns' | '/'
-  id: '__root__' | '/_kanban' | '/_kanban/columns' | '/_kanban/'
+  to: '/board' | '/board/$boardId' | '/board/columns'
+  id: '__root__' | '/board' | '/board/$boardId' | '/board/columns'
   fileRoutesById: FileRoutesById
 }
 
 export interface RootRouteChildren {
-  KanbanRoute: typeof KanbanRouteWithChildren
+  BoardRoute: typeof BoardRouteWithChildren
 }
 
 const rootRouteChildren: RootRouteChildren = {
-  KanbanRoute: KanbanRouteWithChildren,
+  BoardRoute: BoardRouteWithChildren,
 }
 
 export const routeTree = rootRoute
@@ -122,23 +123,23 @@ export const routeTree = rootRoute
     "__root__": {
       "filePath": "__root.tsx",
       "children": [
-        "/_kanban"
+        "/board"
       ]
     },
-    "/_kanban": {
-      "filePath": "_kanban.tsx",
+    "/board": {
+      "filePath": "board.tsx",
       "children": [
-        "/_kanban/columns",
-        "/_kanban/"
+        "/board/$boardId",
+        "/board/columns"
       ]
     },
-    "/_kanban/columns": {
-      "filePath": "_kanban/columns.tsx",
-      "parent": "/_kanban"
+    "/board/$boardId": {
+      "filePath": "board/$boardId.tsx",
+      "parent": "/board"
     },
-    "/_kanban/": {
-      "filePath": "_kanban/index.tsx",
-      "parent": "/_kanban"
+    "/board/columns": {
+      "filePath": "board/columns.tsx",
+      "parent": "/board"
     }
   }
 }
