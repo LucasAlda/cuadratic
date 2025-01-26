@@ -1,16 +1,16 @@
-import { AppSidebar } from '@/components/app-sidebar'
-import { BreadcrumbItem, BreadcrumbPage } from '@/components/ui/breadcrumb'
-import { BreadcrumbList } from '@/components/ui/breadcrumb'
-import { NavActions } from '@/components/nav-actions'
-import { Breadcrumb } from '@/components/ui/breadcrumb'
-import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
-import { SidebarInset } from '@/components/ui/sidebar'
-import { createFileRoute, Outlet } from '@tanstack/react-router'
-import { Separator } from '@/components/ui/separator'
+import { AppSidebar } from "@/components/app-sidebar";
+import { BreadcrumbItem, BreadcrumbPage } from "@/components/ui/breadcrumb";
+import { BreadcrumbList } from "@/components/ui/breadcrumb";
+import { NavActions } from "@/components/nav-actions";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarInset } from "@/components/ui/sidebar";
+import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { Separator } from "@/components/ui/separator";
 
-export const Route = createFileRoute('/board')({
+export const Route = createFileRoute("/board")({
   component: RouteComponent,
-})
+});
 
 function RouteComponent() {
   return (
@@ -24,9 +24,7 @@ function RouteComponent() {
             <Breadcrumb>
               <BreadcrumbList>
                 <BreadcrumbItem>
-                  <BreadcrumbPage className="line-clamp-1">
-                    Zero Sync Kanban
-                  </BreadcrumbPage>
+                  <BreadcrumbPage className="line-clamp-1">Zero Sync Kanban</BreadcrumbPage>
                 </BreadcrumbItem>
               </BreadcrumbList>
             </Breadcrumb>
@@ -38,5 +36,5 @@ function RouteComponent() {
         <Outlet />
       </SidebarInset>
     </SidebarProvider>
-  )
+  );
 }

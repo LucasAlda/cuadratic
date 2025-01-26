@@ -30,15 +30,15 @@ CREATE TABLE "tickets" (
   "stateId" VARCHAR REFERENCES "states"(id),
   "body" VARCHAR NOT NULL,
   "timestamp" TIMESTAMP not null default now(),
-  "sortOrder" INT NOT NULL
+  "sortOrder" FLOAT NOT NULL
 );
 
 -- TODO: Add seed data
 INSERT INTO "boards" (id, name, description) VALUES ('1', 'Zero Sync Board', 'First board for testing');
 
-INSERT INTO "states" (id, "boardId", name, sort_order) VALUES ('1', 1, 'To Do', 1);
-INSERT INTO "states" (id, "boardId", name, sort_order) VALUES ('2', 1, 'In Progress', 2);
-INSERT INTO "states" (id, "boardId", name, sort_order) VALUES ('3', 1, 'Done', 3);
+INSERT INTO "states" (id, "boardId", name, sort_order) VALUES ('1', 1, 'To Do', 1.0);
+INSERT INTO "states" (id, "boardId", name, sort_order) VALUES ('2', 1, 'In Progress', 2.0);
+INSERT INTO "states" (id, "boardId", name, sort_order) VALUES ('3', 1, 'Done', 3.0);
 
 INSERT INTO "members" (id, "boardId", "userId") VALUES ('1', 1, 1);
 INSERT INTO "members" (id, "boardId", "userId") VALUES ('2', 1, 2);
