@@ -40,6 +40,7 @@ const state = table("states")
     boardId: string(),
     name: string(),
     order: string(),
+    color: string(),
   })
   .primaryKey("id");
 
@@ -56,10 +57,15 @@ const stateRelations = relationships(state, ({ one }) => {
 const ticket = table("tickets")
   .columns({
     id: string(),
+    shortId: number().optional(),
     boardId: string(),
     senderId: number(),
+    assigneeId: number().optional(),
     stateId: string(),
-    body: string(),
+    title: string(),
+    body: string().optional(),
+    dueDate: number().optional(),
+    priority: number().optional(),
     timestamp: number(),
     sortOrder: number(),
   })

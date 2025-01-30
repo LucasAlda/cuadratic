@@ -9,6 +9,19 @@ import { Plus, X } from "lucide-react";
 import { DropResult } from "@hello-pangea/dnd";
 import type { State, Ticket } from "@/lib/zero";
 import { Column, Item, Kanban } from "@/components/kanban";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { useEffect, useState } from "react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 
 export const Route = createFileRoute("/board/$boardId")({
   component: Example,
@@ -116,38 +129,13 @@ function Example() {
 
 function StateColumn({ children, state }: { children: ReactNode; state: State }) {
   const z = useZero();
-  const [maxSortOrder] = useQuery(
-    z.query.tickets
-      .where("boardId", "=", state.boardId)
-      .where("stateId", "=", state.id)
-      .orderBy("sortOrder", "desc")
-      .one()
-  );
 
   return (
     <div className="px-2 w-full h-full max-h-full overflow-y-hidden">
       <div className="bg-slate-200 w-full h-full p-2 rounded-lg shadow-sm flex flex-col gap-2">
         <div className="flex gap-2 justify-between items-center">
-          <div className="text-sm font-semibold px-4">{state.name}</div>
-          <Button
-            variant="ghost"
-            className="size-7 hover:bg-slate-300"
-            size="sm"
-            onClick={() => {
-              const ticket = {
-                boardId: state.boardId,
-                timestamp: Date.now(),
-                id: (Math.random() * 1000000).toFixed(0),
-                body: posibleNames[Math.round(Math.random() * (posibleNames.length - 1))],
-                stateId: state.id,
-                senderId: 1,
-                sortOrder: (maxSortOrder?.sortOrder ?? 0) + 1000,
-              };
-              z.mutate.tickets.insert(ticket);
-            }}
-          >
-            <Plus />
-          </Button>
+          <div className="text-sm font-semibold pr-4 pl-2 flex items-center gap-1.5">{state.name}</div>
+          <AddTicket defaultState={state.id} boardId={state.boardId} />
         </div>
         {children}
       </div>
@@ -161,21 +149,19 @@ function Ticket({ ticket, isDragging }: { ticket: Ticket & { state: State | unde
   return (
     <div
       className={cn(
-        "bg-white p-3 w-full rounded-md shadow-sm border group cursor-pointer",
+        "bg-white p-3 w-full rounded-md shadow-sm border group cursor-pointer select-none",
         isDragging && "shadow-lg cursor-move"
       )}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex flex-col gap-1">
-          <p className="m-0 flex-1 font-medium text-sm">
-            #{ticket.id} - {ticket.body}
-          </p>
+          <p className="m-0 flex-1 font-medium text-sm">{ticket.title}</p>
           <p className="m-0 text-muted-foreground text-xs">{ticket.state?.name}</p>
         </div>
-        {ticket.senderId && users.find((user) => user.id === ticket.senderId) && (
+        {ticket.assigneeId && users.find((user) => user.id === ticket.assigneeId) && (
           <Avatar className="h-4 w-4 shrink-0 group-hover:hidden">
-            <AvatarImage src={users.find((user) => user.id === ticket.senderId)?.image} />
-            <AvatarFallback>{users.find((user) => user.id === ticket.senderId)?.name.charAt(0)}</AvatarFallback>
+            <AvatarImage src={users.find((user) => user.id === ticket.assigneeId)?.image} />
+            <AvatarFallback>{users.find((user) => user.id === ticket.assigneeId)?.name.charAt(0)}</AvatarFallback>
           </Avatar>
         )}
         <div
@@ -191,6 +177,138 @@ function Ticket({ ticket, isDragging }: { ticket: Ticket & { state: State | unde
       </div>
       <p className="m-0 text-muted-foreground text-xs">{format(ticket.timestamp, "MMM d")}</p>
     </div>
+  );
+}
+
+function AddTicket({ defaultState, boardId }: { defaultState: string; boardId: string }) {
+  const z = useZero();
+
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState("");
+  const [dueDate, setDueDate] = useState<string>();
+  const [priority, setPriority] = useState<number>();
+  const [assignee, setAssignee] = useState<number>();
+  const [body, setBody] = useState<string>();
+  const [state, setState] = useState(defaultState);
+
+  const [states] = useQuery(z.query.states.where("boardId", "=", boardId));
+  const [maxSortOrder] = useQuery(
+    z.query.tickets.where("boardId", "=", boardId).where("stateId", "=", state).orderBy("sortOrder", "desc").one()
+  );
+
+  function add() {
+    const ticket = {
+      boardId: boardId,
+      timestamp: Date.now(),
+      id: (Math.random() * 1000000).toFixed(0),
+      title: title,
+      body: body,
+      dueDate: dueDate ? new Date(dueDate).getTime() : undefined,
+      priority: priority,
+      stateId: state,
+      assigneeId: assignee,
+      senderId: 1,
+      sortOrder: (maxSortOrder?.sortOrder ?? 0) + 1000,
+    };
+    z.mutate.tickets.insert(ticket);
+    setOpen(false);
+  }
+
+  useEffect(() => {
+    if (open) return;
+    setTimeout(() => {
+      setTitle("");
+      setBody("");
+      setState(defaultState);
+      setDueDate(undefined);
+      setPriority(undefined);
+      setAssignee(undefined);
+    }, 200);
+  }, [open]);
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="ghost" className="size-7 hover:bg-slate-300" size="sm">
+          <Plus />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="p-3 max-w-xl">
+        <DialogTitle className="sr-only">Create Ticket</DialogTitle>
+        <div className="">
+          <Input
+            className="border-0 font-medium shadow-none focus-visible:ring-0 p-1 md:text-lg"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Issue title"
+          />
+          <Textarea
+            className="border-0 shadow-none text-slate-600 focus-visible:ring-0 p-0 px-1 h-24"
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            placeholder="Add a description..."
+          />
+        </div>
+        <DialogFooter className="flex justify-between sm:justify-between">
+          <div className="flex gap-1 items-end">
+            <Select value={state} onValueChange={setState}>
+              <SelectTrigger className="text-xs h-8 px-2 gap-1">
+                <SelectValue placeholder="State" />
+              </SelectTrigger>
+              <SelectContent>
+                {states.map((state) => (
+                  <SelectItem key={state.id} value={state.id}>
+                    {state.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Input
+              type="date"
+              className="h-8 px-2 md:text-xs"
+              value={dueDate ?? ""}
+              onChange={(e) => setDueDate(e.target.value)}
+            />
+            <Select value={priority?.toString()} onValueChange={(value) => setPriority(Number(value))}>
+              <SelectTrigger className="text-xs h-8 px-2 gap-1">
+                <SelectValue placeholder="Priority" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1">Low</SelectItem>
+                <SelectItem value="2">High</SelectItem>
+                <SelectItem value="3">Urgent</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={assignee?.toString()} onValueChange={(value) => setAssignee(Number(value))}>
+              <SelectTrigger className="text-xs h-8 px-2 gap-1">
+                <SelectValue placeholder="Assignee">
+                  <Avatar className="size-4">
+                    <AvatarImage src={users.find((user) => user.id === Number(assignee))?.image} />
+                    <AvatarFallback>
+                      {users.find((user) => user.id === Number(assignee))?.name.charAt(0)}
+                    </AvatarFallback>
+                  </Avatar>
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {users.map((user) => (
+                  <SelectItem key={user.id} value={user.id.toString()}>
+                    <div className="flex items-center gap-1.5">
+                      <Avatar className="size-4">
+                        <AvatarImage src={user.image} />
+                        <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                      </Avatar>
+                      {user.name}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <Button onClick={add}>Create</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

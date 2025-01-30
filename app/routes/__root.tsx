@@ -37,7 +37,8 @@ function RootComponent() {
     </RootDocument>
   );
 }
-export const z = new Zero({
+
+export const zero = new Zero({
   userID: "anon",
   // auth: () => encodedJWT,
   server: import.meta.env.VITE_PUBLIC_SERVER,
@@ -54,7 +55,7 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
         <Meta />
       </head>
       <body>
-        <ZeroProvider zero={z}>
+        <ZeroProvider zero={zero}>
           {children}
           <ScrollRestoration />
           <Scripts />
