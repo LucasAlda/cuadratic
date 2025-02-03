@@ -16,7 +16,7 @@ CREATE TABLE "members" (
   "userId" INT
 );
 
-CREATE TABLE "states" (
+CREATE TABLE "categories" (
   "id" VARCHAR PRIMARY KEY,
   "boardId" VARCHAR REFERENCES "boards"(id),
   "name" VARCHAR NOT NULL,
@@ -24,17 +24,20 @@ CREATE TABLE "states" (
   "color" VARCHAR NOT NULL
 );
 
+CREATE TYPE status_enum AS ENUM ('TODO', 'NEXT', 'IN_PROGRESS', 'BLOCKED', 'DONE');
+
 CREATE TABLE "tickets" (
   "id" VARCHAR PRIMARY KEY,
   "shortId" SERIAL,
   "boardId" VARCHAR REFERENCES "boards"(id),
   "senderId" INT NOT NULL,
   "assigneeId" INT,
-  "stateId" VARCHAR REFERENCES "states"(id),
+  "categoryId" VARCHAR REFERENCES "categories"(id),
+  "status" status_enum DEFAULT 'TODO',
   "title" VARCHAR NOT NULL,
   "body" VARCHAR,
   "dueDate" TIMESTAMP,
-  "priority" INT,
+  "priority" INT NOT NULL DEFAULT -1,
   "timestamp" TIMESTAMP not null default now(),
   "sortOrder" FLOAT NOT NULL
 );
@@ -42,18 +45,18 @@ CREATE TABLE "tickets" (
 -- TODO: Add seed data
 INSERT INTO "boards" (id, name, description) VALUES ('1', 'Zero Sync Board', 'First board for testing');
 
-INSERT INTO "states" (id, "boardId", name, sort_order, color) VALUES ('1', 1, 'To Do', 1.0, '#000000');
-INSERT INTO "states" (id, "boardId", name, sort_order, color) VALUES ('2', 1, 'In Progress', 2.0, '#000000');
-INSERT INTO "states" (id, "boardId", name, sort_order, color) VALUES ('3', 1, 'Done', 3.0, '#000000');
+INSERT INTO "categories" (id, "boardId", name, sort_order, color) VALUES ('1', 1, 'Bug', 1.0, '#000000');
+INSERT INTO "categories" (id, "boardId", name, sort_order, color) VALUES ('2', 1, 'Feature', 2.0, '#000000');
+INSERT INTO "categories" (id, "boardId", name, sort_order, color) VALUES ('3', 1, 'Idea', 3.0, '#000000');
 
 INSERT INTO "members" (id, "boardId", "userId") VALUES ('1', 1, 1);
 INSERT INTO "members" (id, "boardId", "userId") VALUES ('2', 1, 2);
 INSERT INTO "members" (id, "boardId", "userId") VALUES ('3', 1, 3);
 INSERT INTO "members" (id, "boardId", "userId") VALUES ('4', 1, 4);
 
-INSERT INTO "tickets" (id, "boardId", "senderId", "stateId", title, timestamp, "sortOrder") VALUES ('1', 1, 1, 1, 'First ticket', '2025-01-01 00:00:00', 1);
-INSERT INTO "tickets" (id, "boardId", "senderId", "stateId", title, timestamp, "sortOrder") VALUES ('2', 1, 2, 2, 'Second ticket', '2025-01-02 00:00:00', 2);
-INSERT INTO "tickets" (id, "boardId", "senderId", "stateId", title, timestamp, "sortOrder") VALUES ('3', 1, 3, 3, 'Third ticket', '2025-01-03 00:00:00', 3);
-INSERT INTO "tickets" (id, "boardId", "senderId", "stateId", title, timestamp, "sortOrder") VALUES ('4', 1, 4, 1, 'Fourth ticket', '2025-01-04 00:00:00', 4);
+INSERT INTO "tickets" (id, "boardId", "senderId", "categoryId", title, timestamp, "sortOrder") VALUES ('1', 1, 1, 1, 'First ticket', '2025-01-01 00:00:00', 1);
+INSERT INTO "tickets" (id, "boardId", "senderId", "categoryId", title, timestamp, "sortOrder") VALUES ('2', 1, 2, 2, 'Second ticket', '2025-01-02 00:00:00', 2);
+INSERT INTO "tickets" (id, "boardId", "senderId", "categoryId", title, timestamp, "sortOrder") VALUES ('3', 1, 3, 3, 'Third ticket', '2025-01-03 00:00:00', 3);
+INSERT INTO "tickets" (id, "boardId", "senderId", "categoryId", title, timestamp, "sortOrder") VALUES ('4', 1, 4, 1, 'Fourth ticket', '2025-01-04 00:00:00', 4);
 
 

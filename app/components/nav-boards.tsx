@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUpRight, Link, MoreHorizontal, StarOff, Trash2 } from "lucide-react";
+import { ArrowUpRight, LinkIcon, MoreHorizontal, StarOff, Trash2 } from "lucide-react";
 
 import {
   DropdownMenu,
@@ -18,6 +18,9 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { useZero } from "@/hooks/use-zero";
+import { useQuery } from "@rocicorp/zero/react";
+import { Link } from "@tanstack/react-router";
 
 const data = {
   boards: [
@@ -77,7 +80,8 @@ const data = {
 export function NavBoards() {
   const { isMobile } = useSidebar();
 
-  const boards = data.boards;
+  const z = useZero();
+  const [boards] = useQuery(z.query.boards.limit(100));
 
   return (
     <SidebarGroup className="group-data-[collapsible=icon]:hidden">
@@ -86,10 +90,9 @@ export function NavBoards() {
         {boards.map((item) => (
           <SidebarMenuItem key={item.name}>
             <SidebarMenuButton asChild>
-              <a href={item.url} title={item.name}>
-                <span>{item.emoji}</span>
-                <span>{item.name}</span>
-              </a>
+              <Link to={`/board/$boardId`} params={{ boardId: item.id }}>
+                <>{item.name}</>
+              </Link>
             </SidebarMenuButton>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -109,7 +112,7 @@ export function NavBoards() {
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem>
-                  <Link className="text-muted-foreground" />
+                  <LinkIcon className="text-muted-foreground" />
                   <span>Copy Link</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem>

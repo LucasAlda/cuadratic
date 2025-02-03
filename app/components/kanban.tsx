@@ -12,14 +12,14 @@ export function Column({
   dropClassName,
 }: {
   children: React.ReactNode;
-  id: string;
+  id: string | number;
   // addTicket: () => void;
   render: (props: { children: ReactNode }) => ReactNode;
   dropClassName?: string;
 }) {
   return render({
     children: (
-      <Droppable droppableId={id}>
+      <Droppable droppableId={id.toString()}>
         {(provided) => (
           <div ref={provided.innerRef} {...provided.droppableProps} className={dropClassName}>
             {children}

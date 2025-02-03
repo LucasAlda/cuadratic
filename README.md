@@ -6,16 +6,17 @@ Coming soon...
 
 ### V1
 
-- [ ] Show created boards on sidebar (5m)
+- [x] Show created boards on sidebar (5m)
 - [ ] Add authentication (1h)
 - [ ] Ticket details sheet (1h)
 - [ ] Edit Tickets (20m)
 - [ ] Ticket comments (1h)
 - [ ] Ticket history (1h)
-- [ ] Group by state, priority, category, etc. (20m)
+- [x] Group by state, priority, category, etc. (20m)
+- [ ] Multiple Assignees (30m)
 - [ ] Filters (20m)
 
-Total Time: 5h 15m
+Total Time: 5h 45m
 
 ### V1.1
 

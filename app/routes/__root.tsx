@@ -5,6 +5,7 @@ import appCss from "@/styles/app.css?url";
 import { schema } from "@/lib/zero";
 import { Zero } from "@rocicorp/zero";
 import { ZeroProvider } from "@rocicorp/zero/react";
+import { Toaster } from "sonner";
 
 export const Route = createRootRoute({
   head: () => ({
@@ -33,6 +34,7 @@ export const Route = createRootRoute({
 function RootComponent() {
   return (
     <RootDocument>
+      <Toaster richColors />
       <Outlet />
     </RootDocument>
   );

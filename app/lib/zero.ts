@@ -5,7 +5,17 @@
 // See https://github.com/rocicorp/mono/blob/main/apps/zbugs/src/domain/schema.ts
 // for more complex examples, including many-to-many.
 
-import { ANYONE_CAN, createSchema, table, definePermissions, Row, string, relationships, number } from "@rocicorp/zero";
+import {
+  ANYONE_CAN,
+  createSchema,
+  table,
+  definePermissions,
+  Row,
+  string,
+  relationships,
+  number,
+  enumeration,
+} from "@rocicorp/zero";
 import { AuthData } from "node_modules/@rocicorp/zero/out/zero-client/src/client/replicache-types";
 
 const board = table("boards")
@@ -20,7 +30,7 @@ const member = table("members")
   .columns({
     id: string(),
     boardId: string(),
-    userId: string(),
+    userId: number(),
   })
   .primaryKey("id");
 
@@ -34,7 +44,7 @@ const memberRelations = relationships(member, ({ one }) => {
   };
 });
 
-const state = table("states")
+const category = table("categories")
   .columns({
     id: string(),
     boardId: string(),
@@ -44,7 +54,7 @@ const state = table("states")
   })
   .primaryKey("id");
 
-const stateRelations = relationships(state, ({ one }) => {
+const categoryRelations = relationships(category, ({ one }) => {
   return {
     board: one({
       sourceField: ["boardId"],
@@ -61,11 +71,12 @@ const ticket = table("tickets")
     boardId: string(),
     senderId: number(),
     assigneeId: number().optional(),
-    stateId: string(),
+    categoryId: string(),
+    status: enumeration<"TODO" | "NEXT" | "IN_PROGRESS" | "BLOCKED" | "DONE">(),
     title: string(),
     body: string().optional(),
     dueDate: number().optional(),
-    priority: number().optional(),
+    priority: number(),
     timestamp: number(),
     sortOrder: number(),
   })
@@ -78,23 +89,23 @@ const ticketRelations = relationships(ticket, ({ one }) => {
       destField: ["id"],
       destSchema: board,
     }),
-    state: one({
-      sourceField: ["stateId"],
+    category: one({
+      sourceField: ["categoryId"],
       destField: ["id"],
-      destSchema: state,
+      destSchema: category,
     }),
   };
 });
 
 export const schema = createSchema(1, {
-  tables: [board, member, state, ticket],
-  relationships: [memberRelations, stateRelations, ticketRelations],
+  tables: [board, member, category, ticket],
+  relationships: [memberRelations, categoryRelations, ticketRelations],
 });
 
 export type Schema = typeof schema;
 export type Board = Row<typeof schema.tables.boards>;
 export type Member = Row<typeof schema.tables.members>;
-export type State = Row<typeof schema.tables.states>;
+export type Category = Row<typeof schema.tables.categories>;
 export type Ticket = Row<typeof schema.tables.tickets>;
 
 export const permissions = definePermissions<AuthData, Schema>(schema, () => {

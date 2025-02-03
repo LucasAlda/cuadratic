@@ -1,30 +1,30 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { createFileRoute, ReactNode } from "@tanstack/react-router";
-import { format } from "date-fns";
+import { format, formatDistance } from "date-fns";
 import { useQuery } from "@rocicorp/zero/react";
 import { Button } from "@/components/ui/button";
 import { useZero } from "@/hooks/use-zero";
 import { cn } from "@/lib/utils";
-import { Plus, X } from "lucide-react";
+import { CalendarIcon, Plus, X } from "lucide-react";
 import { DropResult } from "@hello-pangea/dnd";
-import type { State, Ticket } from "@/lib/zero";
+import type { Category, Ticket } from "@/lib/zero";
 import { Column, Item, Kanban } from "@/components/kanban";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogOverlay, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useEffect, useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
+import { SidebarTrigger } from "@/components/ui/sidebar";
+import { Separator } from "@/components/ui/separator";
+import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage } from "@/components/ui/breadcrumb";
+import { NavActions } from "@/components/nav-actions";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export const Route = createFileRoute("/board/$boardId")({
-  component: Example,
+  component: Board,
 });
 
 const users = [
@@ -55,63 +55,145 @@ const users = [
   },
 ];
 
-function Example() {
+type Status = "TODO" | "NEXT" | "IN_PROGRESS" | "BLOCKED" | "DONE";
+
+const priorities = [
+  { id: "-1", name: "No Priority" },
+  { id: "1", name: "Low" },
+  { id: "2", name: "High" },
+  { id: "3", name: "Urgent" },
+];
+
+const statuses = [
+  { id: "TODO", name: "To Do" },
+  { id: "NEXT", name: "Next" },
+  { id: "IN_PROGRESS", name: "In Progress" },
+  { id: "BLOCKED", name: "Blocked" },
+  { id: "DONE", name: "Done" },
+];
+
+type NewTicket = {
+  open: boolean;
+  boardId: string;
+  title: string;
+  dueDate: string | undefined;
+  priority: string;
+  assignee: number | undefined;
+  body: string;
+  categoryId: string;
+  status: Status;
+};
+
+const groupKeys = {
+  status: "status",
+  priority: "priority",
+  category: "categoryId",
+} as const;
+
+function Board() {
   const z = useZero();
   const { boardId } = Route.useParams();
+  const [groupBy, setGroupBy] = useState<"status" | "priority" | "category">("category");
+  const [newTicket, setNewTicket] = useState<NewTicket>({
+    open: false,
+    boardId: boardId,
+    title: "",
+    dueDate: undefined,
+    priority: "-1",
+    assignee: undefined,
+    body: "",
+    categoryId: "",
+    status: "TODO",
+  });
 
-  const [states] = useQuery(z.query.states.where("boardId", "=", boardId));
+  const [board] = useQuery(z.query.boards.where("id", "=", boardId).one());
+  const [categories] = useQuery(z.query.categories.where("boardId", "=", boardId));
   const [unsortedTickets] = useQuery(
     z.query.tickets
       .orderBy("timestamp", "asc")
-      .related("state", (state) => state.one())
+      .related("category", (category) => category.one())
       .where("boardId", "=", boardId)
       .orderBy("sortOrder", "asc")
   );
 
-  const tickets = unsortedTickets.sort((a, b) => a.sortOrder - b.sortOrder);
+  const cols = (groupBy === "status" ? statuses : groupBy === "priority" ? priorities : categories).map((c) => ({
+    ...c,
+    tickets: unsortedTickets
+      .filter((t) => t[groupKeys[groupBy]]?.toString() === c.id)
+      .sort((a, b) => a.sortOrder - b.sortOrder),
+  }));
 
   function onDragEnd(result: DropResult) {
     const { source, destination, draggableId } = result;
     if (!destination) return;
     if (source.index === destination.index && source.droppableId === destination.droppableId) return;
 
-    const col = tickets.filter((t) => t.stateId === destination.droppableId);
+    const col = cols.find((c) => c.id === destination.droppableId);
 
     let prevOrder, nextOrder;
     if (source.droppableId === destination.droppableId && source.index < destination.index) {
-      prevOrder = col[destination.index]?.sortOrder;
-      nextOrder = col[destination.index + 1]?.sortOrder;
+      prevOrder = col?.tickets[destination.index]?.sortOrder;
+      nextOrder = col?.tickets[destination.index + 1]?.sortOrder;
     } else {
-      prevOrder = col[destination.index - 1]?.sortOrder;
-      nextOrder = col[destination.index]?.sortOrder;
+      prevOrder = col?.tickets[destination.index - 1]?.sortOrder;
+      nextOrder = col?.tickets[destination.index]?.sortOrder;
     }
 
     let newOrder;
-    if (prevOrder === undefined) newOrder = (col.at(0)?.sortOrder ?? 0) - 1000;
-    else if (nextOrder === undefined) newOrder = (col.at(-1)?.sortOrder ?? 0) + 1000;
+    if (nextOrder === undefined) newOrder = (col?.tickets.at(-1)?.sortOrder ?? 0) + 1000;
+    else if (prevOrder === undefined) newOrder = (col?.tickets.at(0)?.sortOrder ?? 0) - 1000;
     else newOrder = (prevOrder + nextOrder) / 2;
 
     z.mutate.tickets.update({
       id: draggableId,
       sortOrder: newOrder,
-      stateId: destination.droppableId,
+      [groupKeys[groupBy]]: destination.droppableId,
     });
   }
 
   return (
-    <div className="p-2 py-4 min-w-[1000px] max-h-[calc(100vh-60px)] h-full flex flex-col">
-      <div className="grid grid-cols-3 flex-grow overflow-hidden">
-        <Kanban onDragEnd={onDragEnd}>
-          {states.map((state) => (
-            <Column
-              key={state.id}
-              id={state.id}
-              dropClassName="flex flex-col h-full overflow-y-auto"
-              render={({ children }) => <StateColumn state={state}>{children}</StateColumn>}
-            >
-              {tickets
-                .filter((item) => item.stateId === state.id)
-                .map((item, index) => (
+    <div className="h-full overflow-hidden">
+      <header className="flex h-14 shrink-0 items-center gap-2">
+        <div className="flex flex-1 items-center gap-2 px-3">
+          <SidebarTrigger />
+          <Separator orientation="vertical" className="mr-2 h-4" />
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbPage className="line-clamp-1 text-base">{board?.name}</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+        </div>
+        <div className="ml-auto flex items-center gap-2 px-3">
+          <Tabs value={groupBy} onValueChange={(value) => setGroupBy(value as "status" | "priority" | "category")}>
+            <TabsList className="bg-slate-200">
+              <TabsTrigger value="status">State</TabsTrigger>
+              <TabsTrigger value="priority">Priority</TabsTrigger>
+              <TabsTrigger value="category">Category</TabsTrigger>
+            </TabsList>
+          </Tabs>
+          <NavActions />
+        </div>
+      </header>
+      <div className="max-h-[calc(100vh-60px)] h-full flex flex-col">
+        <div className="p-2 py-4 flex flex-grow overflow-y-hidden overflow-x-auto">
+          <Kanban onDragEnd={onDragEnd}>
+            {cols.map((col) => (
+              <Column
+                key={col.id}
+                id={col.id}
+                dropClassName="flex flex-col h-full overflow-y-auto"
+                render={({ children }) => (
+                  <StateColumn
+                    category={col}
+                    openNewTicket={() => setNewTicket((t) => ({ ...t, open: true, [groupKeys[groupBy]]: col.id }))}
+                  >
+                    {children}
+                  </StateColumn>
+                )}
+              >
+                {col.tickets.map((item, index) => (
                   <Item
                     key={item.id}
                     index={index}
@@ -119,23 +201,33 @@ function Example() {
                     render={({ isDragging }) => <Ticket ticket={item} isDragging={isDragging} />}
                   />
                 ))}
-            </Column>
-          ))}
-        </Kanban>
+              </Column>
+            ))}
+          </Kanban>
+          <AddTicket newTicket={newTicket} setNewTicket={setNewTicket} />
+        </div>
       </div>
     </div>
   );
 }
 
-function StateColumn({ children, state }: { children: ReactNode; state: State }) {
-  const z = useZero();
-
+function StateColumn({
+  children,
+  category,
+  openNewTicket,
+}: {
+  children: ReactNode;
+  category: { id: string | number; name: string };
+  openNewTicket: () => void;
+}) {
   return (
-    <div className="px-2 w-full h-full max-h-full overflow-y-hidden">
+    <div className="px-2 w-[320px] shrink-0 h-full max-h-full overflow-y-hidden">
       <div className="bg-slate-200 w-full h-full p-2 rounded-lg shadow-sm flex flex-col gap-2">
         <div className="flex gap-2 justify-between items-center">
-          <div className="text-sm font-semibold pr-4 pl-2 flex items-center gap-1.5">{state.name}</div>
-          <AddTicket defaultState={state.id} boardId={state.boardId} />
+          <div className="text-sm font-semibold pr-4 pl-2 flex items-center gap-1.5">{category.name}</div>
+          <Button variant="ghost" className="size-7 hover:bg-slate-300" size="sm" onClick={openNewTicket}>
+            <Plus />
+          </Button>
         </div>
         {children}
       </div>
@@ -143,7 +235,7 @@ function StateColumn({ children, state }: { children: ReactNode; state: State })
   );
 }
 
-function Ticket({ ticket, isDragging }: { ticket: Ticket & { state: State | undefined }; isDragging: boolean }) {
+function Ticket({ ticket, isDragging }: { ticket: Ticket & { category: Category | undefined }; isDragging: boolean }) {
   const z = useZero();
 
   return (
@@ -156,7 +248,9 @@ function Ticket({ ticket, isDragging }: { ticket: Ticket & { state: State | unde
       <div className="flex items-start justify-between gap-2">
         <div className="flex flex-col gap-1">
           <p className="m-0 flex-1 font-medium text-sm">{ticket.title}</p>
-          <p className="m-0 text-muted-foreground text-xs">{ticket.state?.name}</p>
+          <p className="m-0 text-muted-foreground text-xs">{ticket.category?.name}</p>
+          <p className="m-0 text-muted-foreground text-xs">{ticket.status}</p>
+          <p className="m-0 text-muted-foreground text-xs">{ticket.sortOrder}</p>
         </div>
         {ticket.assigneeId && users.find((user) => user.id === ticket.assigneeId) && (
           <Avatar className="h-4 w-4 shrink-0 group-hover:hidden">
@@ -180,156 +274,237 @@ function Ticket({ ticket, isDragging }: { ticket: Ticket & { state: State | unde
   );
 }
 
-function AddTicket({ defaultState, boardId }: { defaultState: string; boardId: string }) {
+function AddTicket({ newTicket, setNewTicket }: { newTicket: NewTicket; setNewTicket: (ticket: NewTicket) => void }) {
   const z = useZero();
 
-  const [open, setOpen] = useState(false);
-  const [title, setTitle] = useState("");
-  const [dueDate, setDueDate] = useState<string>();
-  const [priority, setPriority] = useState<number>();
-  const [assignee, setAssignee] = useState<number>();
-  const [body, setBody] = useState<string>();
-  const [state, setState] = useState(defaultState);
-
-  const [states] = useQuery(z.query.states.where("boardId", "=", boardId));
+  const [categories] = useQuery(z.query.categories.where("boardId", "=", newTicket.boardId));
+  const [members] = useQuery(z.query.members.where("boardId", "=", newTicket.boardId));
   const [maxSortOrder] = useQuery(
-    z.query.tickets.where("boardId", "=", boardId).where("stateId", "=", state).orderBy("sortOrder", "desc").one()
+    z.query.tickets
+      .where("boardId", "=", newTicket.boardId)
+      .where("categoryId", "=", newTicket.categoryId)
+      .orderBy("sortOrder", "desc")
+      .one()
   );
 
+  const canBeAdded = newTicket.title && newTicket.status;
+
   function add() {
+    if (!newTicket.title) {
+      toast.error("Title is required");
+      return;
+    }
+
+    if (!newTicket.categoryId) {
+      toast.error("Category is required");
+      return;
+    }
+
+    if (!canBeAdded) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
     const ticket = {
-      boardId: boardId,
-      timestamp: Date.now(),
       id: (Math.random() * 1000000).toFixed(0),
-      title: title,
-      body: body,
-      dueDate: dueDate ? new Date(dueDate).getTime() : undefined,
-      priority: priority,
-      stateId: state,
-      assigneeId: assignee,
+      boardId: newTicket.boardId,
+      timestamp: Date.now(),
+      title: newTicket.title,
+      body: newTicket.body,
+      dueDate: newTicket.dueDate ? new Date(newTicket.dueDate).getTime() : null,
+      priority: Number(newTicket.priority),
+      categoryId: newTicket.categoryId,
+      status: newTicket.status,
+      assigneeId: newTicket.assignee ?? null,
       senderId: 1,
       sortOrder: (maxSortOrder?.sortOrder ?? 0) + 1000,
     };
     z.mutate.tickets.insert(ticket);
-    setOpen(false);
+    setNewTicket({ ...newTicket, open: false });
   }
 
   useEffect(() => {
-    if (open) return;
+    const handleToggleOpen = (e: KeyboardEvent) => {
+      if (e.key === "p" && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        setNewTicket({ ...newTicket, open: !newTicket.open });
+      }
+    };
+
+    window.addEventListener("keydown", handleToggleOpen);
+    return () => window.removeEventListener("keydown", handleToggleOpen);
+  }, []);
+
+  useEffect(() => {
+    if (!newTicket.open) return;
+
+    const handleSubmit = (e: KeyboardEvent) => {
+      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+        add();
+      }
+    };
+
+    window.addEventListener("keydown", handleSubmit);
+    return () => window.removeEventListener("keydown", handleSubmit);
+  }, [newTicket.open, add]);
+
+  useEffect(() => {
+    if (newTicket.open) return;
     setTimeout(() => {
-      setTitle("");
-      setBody("");
-      setState(defaultState);
-      setDueDate(undefined);
-      setPriority(undefined);
-      setAssignee(undefined);
+      setNewTicket({
+        ...newTicket,
+        title: "",
+        body: "",
+        categoryId: newTicket.categoryId,
+        dueDate: undefined,
+        priority: "-1",
+        assignee: undefined,
+      });
     }, 200);
-  }, [open]);
+  }, [newTicket.open]);
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="ghost" className="size-7 hover:bg-slate-300" size="sm">
-          <Plus />
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="p-3 max-w-xl">
+    <Dialog open={newTicket.open} onOpenChange={(open) => setNewTicket({ ...newTicket, open })}>
+      <DialogContent
+        overlay={<DialogOverlay className="bg-black/50" />}
+        className="p-3 max-w-2xl translate-y-0 data-[state=open]:slide-in-from-top-1 data-[state=closed]:slide-out-to-top-1 top-[10vh]"
+      >
         <DialogTitle className="sr-only">Create Ticket</DialogTitle>
-        <div className="">
+        <div className="space-y-1">
+          <Select
+            value={newTicket.categoryId}
+            onValueChange={(value) => setNewTicket({ ...newTicket, categoryId: value })}
+          >
+            <SelectTrigger className="text-xs w-min h-7 px-1.5 gap-1">
+              <SelectValue placeholder="Category" />
+            </SelectTrigger>
+            <SelectContent>
+              {categories.map((category) => (
+                <SelectItem key={category.id} value={category.id}>
+                  {category.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Input
-            className="border-0 font-medium shadow-none focus-visible:ring-0 p-1 md:text-lg"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Issue title"
+            autoFocus
+            className="border-0 font-medium !mt-3 shadow-none h-8 focus-visible:ring-0 p-1 md:text-base placeholder:text-gray-400"
+            value={newTicket.title}
+            onChange={(e) => setNewTicket({ ...newTicket, title: e.target.value })}
+            placeholder="Ticket title"
           />
           <Textarea
-            className="border-0 shadow-none text-slate-600 focus-visible:ring-0 p-0 px-1 h-24"
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
+            className="border-0 shadow-none font-light md:text-base focus-visible:ring-0 p-0 px-1 h-40 placeholder:text-gray-400"
+            value={newTicket.body}
+            onChange={(e) => setNewTicket({ ...newTicket, body: e.target.value })}
             placeholder="Add a description..."
           />
         </div>
         <DialogFooter className="flex justify-between sm:justify-between">
           <div className="flex gap-1 items-end">
-            <Select value={state} onValueChange={setState}>
-              <SelectTrigger className="text-xs h-8 px-2 gap-1">
-                <SelectValue placeholder="State" />
+            <Select
+              value={newTicket.status}
+              onValueChange={(value: Status) => setNewTicket({ ...newTicket, status: value })}
+            >
+              <SelectTrigger className="text-xs h-7 px-2 gap-1" icon={""}>
+                <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
-                {states.map((state) => (
-                  <SelectItem key={state.id} value={state.id}>
-                    {state.name}
+                {statuses.map((status) => (
+                  <SelectItem key={status.id} value={status.id}>
+                    {status.name}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <Input
-              type="date"
-              className="h-8 px-2 md:text-xs"
-              value={dueDate ?? ""}
-              onChange={(e) => setDueDate(e.target.value)}
-            />
-            <Select value={priority?.toString()} onValueChange={(value) => setPriority(Number(value))}>
-              <SelectTrigger className="text-xs h-8 px-2 gap-1">
+
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="h-7 px-2 hover:bg-white text-xs font-normal">
+                  {newTicket.dueDate ? (
+                    formatDistance(new Date(newTicket.dueDate), new Date(), {
+                      addSuffix: true,
+                    })
+                  ) : (
+                    <CalendarIcon className="!size-3.5" />
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="p-0 w-fit">
+                <div>
+                  <h5 className="text-base font-medium px-2 pt-2.5">Due date</h5>
+                  <Calendar
+                    mode="single"
+                    selected={newTicket.dueDate ? new Date(newTicket.dueDate) : undefined}
+                    onSelect={(date) => setNewTicket({ ...newTicket, dueDate: date?.toISOString() })}
+                  />
+                </div>
+              </PopoverContent>
+            </Popover>
+            <Select
+              value={newTicket.priority}
+              onValueChange={(value) => setNewTicket({ ...newTicket, priority: value })}
+            >
+              <SelectTrigger
+                className={cn(
+                  "text-xs h-7 px-2 gap-1",
+                  newTicket.priority === "1" && "border-blue-200 bg-blue-100 text-blue-700",
+                  newTicket.priority === "2" && "border-amber-200 bg-amber-100 text-amber-700",
+                  newTicket.priority === "3" && "border-red-200 bg-red-100 text-red-700"
+                )}
+                icon={""}
+              >
                 <SelectValue placeholder="Priority" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="1">Low</SelectItem>
-                <SelectItem value="2">High</SelectItem>
-                <SelectItem value="3">Urgent</SelectItem>
+                <SelectItem value="-1" className="">
+                  No Priority
+                </SelectItem>
+                <SelectItem value="1" className="focus:bg-blue-100 focus:text-blue-700">
+                  Low
+                </SelectItem>
+                <SelectItem value="2" className="focus:bg-amber-100 focus:text-amber-700">
+                  High
+                </SelectItem>
+                <SelectItem value="3" className="focus:bg-red-100 focus:text-red-700">
+                  Urgent
+                </SelectItem>
               </SelectContent>
             </Select>
-            <Select value={assignee?.toString()} onValueChange={(value) => setAssignee(Number(value))}>
-              <SelectTrigger className="text-xs h-8 px-2 gap-1">
+            <Select
+              value={newTicket.assignee?.toString()}
+              onValueChange={(value) => setNewTicket({ ...newTicket, assignee: Number(value) })}
+            >
+              <SelectTrigger className="text-xs h-7 px-2 gap-1" icon={""}>
                 <SelectValue placeholder="Assignee">
                   <Avatar className="size-4">
-                    <AvatarImage src={users.find((user) => user.id === Number(assignee))?.image} />
+                    <AvatarImage src={users.find((user) => user.id === newTicket.assignee)?.image} />
                     <AvatarFallback>
-                      {users.find((user) => user.id === Number(assignee))?.name.charAt(0)}
+                      {users.find((user) => user.id === newTicket.assignee)?.name.charAt(0)}
                     </AvatarFallback>
                   </Avatar>
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                {users.map((user) => (
+                {members.map((user) => (
                   <SelectItem key={user.id} value={user.id.toString()}>
                     <div className="flex items-center gap-1.5">
                       <Avatar className="size-4">
-                        <AvatarImage src={user.image} />
-                        <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                        <AvatarImage src={users.find((u) => u.id === user.userId)?.image} />
+                        <AvatarFallback>{users.find((u) => u.id === user.userId)?.name.charAt(0)}</AvatarFallback>
                       </Avatar>
-                      {user.name}
+                      {users.find((u) => u.id === user.userId)?.name}
                     </div>
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-          <Button onClick={add}>Create</Button>
+          <Button size="sm" className="text-sm" onClick={add} disabled={!canBeAdded}>
+            Create
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
-
-const posibleNames = [
-  "AI Scene Analysis",
-  "Collaborative Editing",
-  "AI-Powered Color Grading",
-  "Real-time Video Chat",
-  "AI Voice-to-Text Subtitles",
-  "Cloud Asset Management",
-  "AI-Assisted Video Transitions",
-  "Version Control System",
-  "AI Content-Aware Fill",
-  "Multi-User Permissions",
-  "AI-Powered Audio Enhancement",
-  "Real-time Project Analytics",
-  "AI-Powered Video Compression",
-  "Global CDN Integration",
-  "AI Object Tracking",
-  "Real-time Language Translation",
-  "AI-Powered Video Summarization",
-  "Blockchain-based Asset Licensing",
-  "AI-Powered Video Editing",
-];
