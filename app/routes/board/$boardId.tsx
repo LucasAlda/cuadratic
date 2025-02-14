@@ -15,7 +15,7 @@ import { useEffect, useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage } from "@/components/ui/breadcrumb";
 import { NavActions } from "@/components/nav-actions";
@@ -93,6 +93,8 @@ const groupKeys = {
 function Board() {
   const z = useZero();
   const { boardId } = Route.useParams();
+  const { state } = useSidebar();
+
   const [groupBy, setGroupBy] = useState<"status" | "priority" | "category">("category");
   const [newTicket, setNewTicket] = useState<NewTicket>({
     open: false,
@@ -152,9 +154,15 @@ function Board() {
   }
 
   return (
-    <div className="h-full overflow-hidden">
-      <header className="flex h-14 shrink-0 items-center gap-2">
-        <div className="flex flex-1 items-center gap-2 px-3">
+    <div className="h-full relative overflow-hidden">
+      <div className="h-14"></div>
+      <header
+        className={cn(
+          "flex top-0 right-0 h-14 md:transition-[width] md:duration-200 md:ease-linear justify-between w-full fixed shrink-0 items-center gap-2",
+          state !== "collapsed" && "md:w-[calc(100%-var(--sidebar-width))]"
+        )}
+      >
+        <div className="flex items-center gap-2 px-3">
           <SidebarTrigger />
           <Separator orientation="vertical" className="mr-2 h-4" />
           <Breadcrumb>
@@ -165,7 +173,7 @@ function Board() {
             </BreadcrumbList>
           </Breadcrumb>
         </div>
-        <div className="ml-auto flex items-center gap-2 px-3">
+        <div className=" flex items-center gap-2 px-3">
           <Tabs value={groupBy} onValueChange={(value) => setGroupBy(value as "status" | "priority" | "category")}>
             <TabsList className="bg-slate-200">
               <TabsTrigger value="status">State</TabsTrigger>
