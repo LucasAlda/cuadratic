@@ -1,5 +1,4 @@
-import { Outlet, ScrollRestoration, createRootRoute } from "@tanstack/react-router";
-import { Meta, Scripts } from "@tanstack/start";
+import { HeadContent, Outlet, Scripts, createRootRoute } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import appCss from "@/styles/app.css?url";
 import { schema } from "@/lib/zero";
@@ -47,19 +46,19 @@ export const zero = new Zero({
   schema: schema,
   // This is often easier to develop with if you're frequently changing
   // the schema. Switch to 'idb' for local-persistence.
-  kvStore: "mem",
+  kvStore: typeof window !== "undefined" ? "idb" : "mem",
 });
 
 function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html>
       <head>
-        <Meta />
+        <HeadContent />
       </head>
       <body>
         <ZeroProvider zero={zero}>
           {children}
-          <ScrollRestoration />
+
           <Scripts />
         </ZeroProvider>
       </body>

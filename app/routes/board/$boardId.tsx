@@ -176,9 +176,9 @@ function Board() {
         <div className=" flex items-center gap-2 px-3">
           <Tabs value={groupBy} onValueChange={(value) => setGroupBy(value as "status" | "priority" | "category")}>
             <TabsList className="bg-slate-200">
+              <TabsTrigger value="category">Category</TabsTrigger>
               <TabsTrigger value="status">State</TabsTrigger>
               <TabsTrigger value="priority">Priority</TabsTrigger>
-              <TabsTrigger value="category">Category</TabsTrigger>
             </TabsList>
           </Tabs>
           <NavActions />
@@ -375,7 +375,7 @@ function AddTicket({ newTicket, setNewTicket }: { newTicket: NewTicket; setNewTi
     <Dialog open={newTicket.open} onOpenChange={(open) => setNewTicket({ ...newTicket, open })}>
       <DialogContent
         overlay={<DialogOverlay className="bg-black/50" />}
-        className="p-3 max-w-2xl translate-y-0 data-[state=open]:slide-in-from-top-1 data-[state=closed]:slide-out-to-top-1 top-[10vh]"
+        className="p-3 max-w-2xl translate-y-0 !data-[state=open]:slide-in-from-top-1 !data-[state=closed]:slide-out-to-top-1 top-[10vh]"
       >
         <DialogTitle className="sr-only">Create Ticket</DialogTitle>
         <div className="space-y-1">
@@ -408,13 +408,13 @@ function AddTicket({ newTicket, setNewTicket }: { newTicket: NewTicket; setNewTi
             placeholder="Add a description..."
           />
         </div>
-        <DialogFooter className="flex justify-between sm:justify-between">
-          <div className="flex gap-1 items-end">
+        <DialogFooter className="flex gap-2 justify-between sm:justify-between flex-col">
+          <div className="flex md:gap-1 gap-2 items-end">
             <Select
               value={newTicket.status}
               onValueChange={(value: Status) => setNewTicket({ ...newTicket, status: value })}
             >
-              <SelectTrigger className="text-xs h-7 px-2 gap-1" icon={""}>
+              <SelectTrigger className="text-xs w-auto h-7 px-2 gap-1" icon={""}>
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -428,7 +428,7 @@ function AddTicket({ newTicket, setNewTicket }: { newTicket: NewTicket; setNewTi
 
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" className="h-7 px-2 hover:bg-white text-xs font-normal">
+                <Button variant="outline" className="h-7 px-2 hover:bg-white w-auto text-xs font-normal">
                   {newTicket.dueDate ? (
                     formatDistance(new Date(newTicket.dueDate), new Date(), {
                       addSuffix: true,
@@ -455,7 +455,7 @@ function AddTicket({ newTicket, setNewTicket }: { newTicket: NewTicket; setNewTi
             >
               <SelectTrigger
                 className={cn(
-                  "text-xs h-7 px-2 gap-1",
+                  "text-xs h-7 px-2 gap-1 w-auto",
                   newTicket.priority === "1" && "border-blue-200 bg-blue-100 text-blue-700",
                   newTicket.priority === "2" && "border-amber-200 bg-amber-100 text-amber-700",
                   newTicket.priority === "3" && "border-red-200 bg-red-100 text-red-700"
@@ -483,7 +483,7 @@ function AddTicket({ newTicket, setNewTicket }: { newTicket: NewTicket; setNewTi
               value={newTicket.assignee?.toString()}
               onValueChange={(value) => setNewTicket({ ...newTicket, assignee: Number(value) })}
             >
-              <SelectTrigger className="text-xs h-7 px-2 gap-1" icon={""}>
+              <SelectTrigger className="text-xs w-auto h-7 px-2 gap-1" icon={""}>
                 <SelectValue placeholder="Assignee">
                   <Avatar className="size-4">
                     <AvatarImage src={users.find((user) => user.id === newTicket.assignee)?.image} />
